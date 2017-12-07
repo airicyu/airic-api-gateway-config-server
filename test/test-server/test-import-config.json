@@ -1,0 +1,44 @@
+{
+    "workspaces": {
+        "6ba955dde3044b6687af7b4d05a64920": {
+            "secret": "c376f991c6744cfea1ccdad23356ab10",
+            "displayName": "Demo Workspace",
+            "apps": {
+                "b84cdbefe8ab42d38df0aa415030c4a1": {
+                    "secret": "fd39eb34e94d41008cc0e196fdc5fc17",
+                    "displayName": "Petstore",
+                    "openAPISpecLastUpdateTime": 0,
+                    "quotaRule": {
+                        "plan a": {
+                            "app": [{
+                                "quota": 100000000,
+                                "bucket": "1m"
+                            }],
+                            "tag": {
+                                "store": [{
+                                    "quota": 100000000,
+                                    "bucket": "1m"
+                                }]
+                            },
+                            "operation": {
+                                "placeOrder": [{
+                                    "quota": 100000000,
+                                    "bucket": "1m"
+                                }]
+                            }
+                        }
+                    }
+                }
+            },
+            "clients": {
+                "4364938982b54da1807c599a955cdfcc": {
+                    "secret": "4af18e30-85b6-4c14-aecd-c489d404a179",
+                    "displayName": "Client A",
+                    "plans": {
+                        "b84cdbefe8ab42d38df0aa415030c4a1": ["plan a"]
+                    }
+                }
+            }
+        }
+    }
+}

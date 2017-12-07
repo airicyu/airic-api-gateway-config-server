@@ -1,0 +1,58 @@
+{
+  "name": "airic-api-gateway-config-server",
+  "version": "0.0.1",
+  "description": "API Gateway Config Server",
+  "author": "Eric Yu",
+  "email": "airic.yu@gmail.com",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/airicyu/airic-api-gateway"
+  },
+  "main": "index.js",
+  "scripts": {
+    "test": "nyc mocha",
+    "coverage": "nyc report --reporter=text-lcov > coverage/icov.info && codecov --file=./coverage/lcov.info"
+  },
+  "dependencies": {
+    "body-parser": "^1.18.2",
+    "express": "^4.16.2",
+    "http-shutdown": "^1.2.0",
+    "jsonwebtoken": "^8.1.0",
+    "mongodb": "^2.2.33",
+    "mysql": "^2.15.0",
+    "request": "^2.83.0",
+    "sqlite3": "^3.1.13",
+    "uuid": "^3.1.0",
+    "yamljs": "^0.3.0"
+  },
+  "devDependencies": {
+    "chai": "^4.1.2",
+    "mocha": "^4.0.1",
+    "nyc": "^11.3.0"
+  },
+  "engines": {
+    "node": "7 || 8"
+  },
+  "nyc": {
+    "check-coverage": true,
+    "per-file": false,
+    "lines": 5,
+    "statements": 5,
+    "functions": 5,
+    "branches": 5,
+    "include": [
+      "src/**.js"
+    ],
+    "exclude": [],
+    "reporter": [
+      "lcov",
+      "text-summary"
+    ],
+    "require": [],
+    "extension": [],
+    "cache": true,
+    "all": true,
+    "report-dir": "./coverage"
+  },
+  "license": "MIT"
+}
