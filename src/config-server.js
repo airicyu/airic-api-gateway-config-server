@@ -272,4 +272,4 @@ configServer.shutdown = async function (port) {
     });
 }.bind(configServer);
 
-module.exports.configServer = configServer;
+module.exports = configServer;

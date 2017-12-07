@@ -1,12 +1,12 @@
 {
   "name": "airic-api-gateway-config-server",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "API Gateway Config Server",
   "author": "Eric Yu",
   "email": "airic.yu@gmail.com",
   "repository": {
     "type": "git",
-    "url": "https://github.com/airicyu/airic-api-gateway"
+    "url": "https://github.com/airicyu/airic-api-gateway-config-server"
   },
   "main": "index.js",
   "scripts": {

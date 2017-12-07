@@ -44,3 +44,4 @@ coverage
 test/TESTS-xunit.xml
 .history
 .nyc_output
+package-lock.json
