@@ -128,7 +128,7 @@ configServer.inflatExpressApp = function (app) {
 
     const workspaceIdTokenFilter = (getValidateWorkspaceIdFunc) => {
         return async(req) => {
-            let validateWorkspaceId = getValidateWorkspaceIdFunc ? getValidateWorkspaceIdFunc(req) : null;
+            let validateWorkspaceId = getValidateWorkspaceIdFunc ? await getValidateWorkspaceIdFunc(req) : null;
             try {
                 let idKey = req.header('id-key');
                 let keyDecoded = jwt.verify(idKey, configServer._publicKey, {
@@ -148,7 +148,7 @@ configServer.inflatExpressApp = function (app) {
 
     const appIdTokenFilter = (getValidateAppIdFunc) => {
         return async(req) => {
-            let validateAppId = getValidateAppIdFunc ? getValidateAppIdFunc(req) : null;
+            let validateAppId = getValidateAppIdFunc ? await getValidateAppIdFunc(req) : null;
             try {
                 let idKey = req.header('id-key');
                 let keyDecoded = jwt.verify(idKey, configServer._publicKey, {
@@ -229,7 +229,17 @@ configServer.inflatExpressApp = function (app) {
         return keysController.verifyIdKey(configServer._publicKey, req, res);
     });
 
-    app.post('/keys/api-key', orPermisionFilter(adminTokenFilter), (req, res) => {
+    app.post('/keys/api-key', orPermisionFilter(
+        adminTokenFilter,
+        workspaceIdTokenFilter(async(req) => {
+            let app = await dataStoreHolder.getDataStore().getApp(req.params.appId);
+            if (app) {
+                return Promise.resolve(app.workspaceId);
+            } else {
+                return Promise.resolve(undefined);
+            }
+        }),
+        appIdTokenFilter(async(req) => Promise.resolve(req.params.appId))), (req, res) => {
         return keysController.generateApiKey(configServer._privateKey, configServer._publicKey, req, res);
     });
 
@@ -246,13 +256,13 @@ configServer.run = async function (port) {
     }
 
     port = port || self._config['port'] || 3001
-    
+
     var privateKeyPath = path.resolve(self._config['private-key-path']);
     var publicKeyPath = path.resolve(self._config['public-key-path']);
 
-	const privateKeyContent = fs.readFileSync(privateKeyPath, 'utf8');
+    const privateKeyContent = fs.readFileSync(privateKeyPath, 'utf8');
     self._privateKey = privateKeyContent;
-	const publicKeyContent = fs.readFileSync(publicKeyPath, 'utf8');
+    const publicKeyContent = fs.readFileSync(publicKeyPath, 'utf8');
     self._publicKey = publicKeyContent;
 
     self._server = http.createServer(self._app);
