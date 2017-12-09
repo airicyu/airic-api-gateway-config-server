@@ -8,6 +8,7 @@ const config = {
 };
 
 const dataStore = {
+    reset: null,
     getWorkspace: null,
     createWorkspace: null,
     updateWorkspace: null,
@@ -28,6 +29,12 @@ const dataStore = {
     getOpenAPISpec: null,
     saveOpenAPISpec: null,
     deleteOpenAPISpec: null,
+}
+
+dataStore.reset = function(){
+    config.workspaces = {};
+    config.apps = {};
+    config.clients = {};
 }
 
 dataStore.getWorkspace = async function (workspaceId) {

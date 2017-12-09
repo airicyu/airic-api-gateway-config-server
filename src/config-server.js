@@ -39,7 +39,9 @@ const configServer = {
     _publicKey: null,
     _config: null,
     setConfig: null,
+    getConfigDataStore: null,
     setConfigDataStore: null,
+    getKeysDataStore: null,
     setKeysDataStore: null,
     setKeyService: null,
     inflatExpressApp: null,
@@ -69,8 +71,16 @@ configServer.setConfigDataStore = function (dataStore) {
     configDataStoreHolder.setDataStore(dataStore);
 }.bind(configServer);
 
+configServer.getConfigDataStore = function (dataStore) {
+    return configDataStoreHolder.getDataStore();
+}.bind(configServer);
+
 configServer.setKeysDataStore = function (dataStore) {
     keysDataStoreHolder.setDataStore(dataStore);
+}.bind(configServer);
+
+configServer.getKeysDataStore = function (dataStore) {
+    return keysDataStoreHolder.getDataStore();
 }.bind(configServer);
 
 configServer.setKeyService = function (keyService) {
@@ -119,12 +129,12 @@ configServer.inflatExpressApp = function (app) {
 
             return Promise.resolve(result ? next() : res.sendStatus(401));
         }
-    }
+    };
 
     const adminTokenFilter = (req) => {
         let idKey = req.header('id-key');
         return (idKey === configServer._config['admin-token']);
-    }
+    };
 
     const workspaceIdTokenFilter = (getValidateWorkspaceIdFunc) => {
         return async(req) => {
@@ -144,7 +154,7 @@ configServer.inflatExpressApp = function (app) {
             } catch (e) {}
             return Promise.resolve(false);
         };
-    }
+    };
 
     const appIdTokenFilter = (getValidateAppIdFunc) => {
         return async(req) => {
@@ -164,7 +174,7 @@ configServer.inflatExpressApp = function (app) {
             } catch (e) {}
             return Promise.resolve(false);
         };
-    }
+    };
 
     app.get('/config/exportWithSecret', orPermisionFilter(
         adminTokenFilter,

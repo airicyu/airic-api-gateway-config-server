@@ -23,7 +23,7 @@ const clientModel = {
             updateTime: client.updateTime,
             _links:{
                 self:{
-                    href: `/config/workspaces/${client.workspace}/clients/${client.clientId}`
+                    href: `/config/workspaces/${client.workspaceId}/clients/${client.clientId}`
                 },
                 workspace:{
                     href: `/config/workspaces/${client.workspaceId}`

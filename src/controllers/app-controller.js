@@ -101,7 +101,7 @@ const updateApp = async(req, res) => {
                 app.secret = oldApp.secret;
             }
             app.createTime = oldApp.createTime;
-            app.UpdateTime = Date.now();
+            app.updateTime = Date.now();
             let isUpdated = await dataStoreHolder.getDataStore().updateApp(app);
         }
         

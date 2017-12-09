@@ -102,7 +102,7 @@ const updateClient = async(req, res) => {
                 client.secret = oldClient.secret;
             }
             client.createTime = oldClient.createTime;
-            client.UpdateTime = Date.now();
+            client.updateTime = Date.now();
             let isUpdated = await dataStoreHolder.getDataStore().updateClient(client);
         }
         

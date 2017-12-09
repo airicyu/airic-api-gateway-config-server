@@ -1,6 +1,6 @@
 {
   "name": "airic-api-gateway-config-server",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "description": "API Gateway Config Server",
   "author": "Eric Yu",
   "email": "airic.yu@gmail.com",

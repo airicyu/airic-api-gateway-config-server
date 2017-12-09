@@ -70,7 +70,7 @@ const updateWorkspace = async(req, res) => {
                 workspace.secret = oldWorkspace.secret;
             }
             workspace.createTime = oldWorkspace.createTime;
-            workspace.UpdateTime = Date.now();
+            workspace.updateTime = Date.now();
             let isUpdated = await dataStoreHolder.getDataStore().updateWorkspace(workspace);
         }
         return res.sendStatus(204);
