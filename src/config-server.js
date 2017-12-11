@@ -133,7 +133,14 @@ configServer.inflatExpressApp = function (app) {
 
     const adminTokenFilter = (req) => {
         let idKey = req.header('id-key');
-        return (idKey === configServer._config['admin-token']);
+        if (idKey === configServer._config['admin-token']) {
+            req.user = req.user || {};
+            req.user.auth = req.user.auth || {};
+            req.user.auth['admin'] = true;
+            return true;
+        } else {
+            return false;
+        }
     };
 
     const workspaceIdTokenFilter = (getValidateWorkspaceIdFunc) => {
@@ -141,6 +148,9 @@ configServer.inflatExpressApp = function (app) {
             let validateWorkspaceId = getValidateWorkspaceIdFunc ? await getValidateWorkspaceIdFunc(req) : null;
             try {
                 let idKey = req.header('id-key');
+                if (!idKey){
+                    return Promise.resolve(false);
+                }
                 let keyDecoded = jwt.verify(idKey, configServer._publicKey, {
                     algorithm: 'RS256'
                 });
@@ -148,10 +158,41 @@ configServer.inflatExpressApp = function (app) {
                     (validateWorkspaceId === null || keyDecoded['sub'] === validateWorkspaceId)) {
                     if (await keysDataStoreHolder.getDataStore().checkIdKeyExist({ key: idKey })) {
                         let subject = keyDecoded['sub'];
-                        return Promise.resolve(subject);
+                        if (subject) {
+                            req.user = req.user || {};
+                            req.user.auth = req.user.auth || {};
+                            req.user.auth['workspace'] = req.user.auth['workspace'] || {};
+                            req.user.auth['workspace'][subject] = true;
+                            return Promise.resolve(true);
+                        } else {
+                            return Promise.resolve(false);
+                        }
                     }
                 }
-            } catch (e) {}
+            } catch (e) {
+            }
+            return Promise.resolve(false);
+        };
+    };
+
+    const workspaceIdSecretFilter = (getValidateWorkspaceIdFunc, getValidateWorkspaceSecretFunc) => {
+        return async(req) => {
+            let validateWorkspaceId = getValidateWorkspaceIdFunc ? await getValidateWorkspaceIdFunc(req) : null;
+            let validateWorkspaceSecret = getValidateWorkspaceSecretFunc ? await getValidateWorkspaceSecretFunc(req) : null;
+            try {
+                let workspace = await configDataStoreHolder.getDataStore().getWorkspace(validateWorkspaceId);
+                if (workspace && workspace.secret === validateWorkspaceSecret){
+                    req.user = req.user || {};
+                    req.user.auth = req.user.auth || {};
+                    req.user.auth['workspace'] = req.user.auth['workspace'] || {};
+                    req.user.auth['workspace'][validateWorkspaceId] = true;
+                    return Promise.resolve(true);
+                } else {
+                    return Promise.resolve(false);
+                }
+            } catch (e) {
+                console.error(e);
+            }
             return Promise.resolve(false);
         };
     };
@@ -161,6 +202,9 @@ configServer.inflatExpressApp = function (app) {
             let validateAppId = getValidateAppIdFunc ? await getValidateAppIdFunc(req) : null;
             try {
                 let idKey = req.header('id-key');
+                if (!idKey){
+                    return Promise.resolve(false);
+                }
                 let keyDecoded = jwt.verify(idKey, configServer._publicKey, {
                     algorithm: 'RS256'
                 });
@@ -168,8 +212,36 @@ configServer.inflatExpressApp = function (app) {
                     (validateAppId === null || keyDecoded['sub'] === validateAppId)) {
                     if (await keysDataStoreHolder.getDataStore().checkIdKeyExist({ key: idKey })) {
                         let subject = keyDecoded['sub'];
-                        return Promise.resolve(subject);
+                        if (subject) {
+                            req.user = req.user || {};
+                            req.user.auth = req.user.auth || {};
+                            req.user.auth['app'] = req.user.auth['app'] || {};
+                            req.user.auth['app'][subject] = true;
+                            return Promise.resolve(true);
+                        } else {
+                            return Promise.resolve(false);
+                        }
                     }
+                }
+            } catch (e) {}
+            return Promise.resolve(false);
+        };
+    };
+
+    const appIdSecretFilter = (getValidateAppIdFunc, getValidateAppSecretFunc) => {
+        return async(req) => {
+            let validateAppId = getValidateAppIdFunc ? await getValidateAppIdFunc(req) : null;
+            let validateAppSecret = getValidateAppSecretFunc ? await getValidateAppSecretFunc(req) : null;
+            try {
+                let app = await configDataStoreHolder.getDataStore().getApp(validateAppId);
+                if (app && app.secret === validateAppSecret){
+                    req.user = req.user || {};
+                    req.user.auth = req.user.auth || {};
+                    req.user.auth['app'] = req.user.auth['app'] || {};
+                    req.user.auth['app'][validateAppId] = true;
+                    return Promise.resolve(true);
+                } else {
+                    return Promise.resolve(false);
                 }
             } catch (e) {}
             return Promise.resolve(false);
@@ -226,34 +298,38 @@ configServer.inflatExpressApp = function (app) {
 
     app.delete('/config/workspaces/:workspaceId/clients/:clientId', orPermisionFilter(adminTokenFilter), clientController.deleteClient);
 
-    app.post('/keys/id-key', orPermisionFilter(adminTokenFilter), (req, res) => {
-        let subjectType = req.body.subjectType;
-        if (subjectType === 'workspace') {
+    app.post('/keys/workspaces/:workspaceId/id-keys',
+        orPermisionFilter(
+            adminTokenFilter,
+            workspaceIdSecretFilter((req) => req.params.workspaceId, (req) => req.body.secret)
+        ), (req, res) => {
             return keysController.generateWorkspaceIdKey(configServer._privateKey, configServer._publicKey, req, res);
-        } else if (subjectType === 'app') {
-            return keysController.generateAppIdKey(configServer._privateKey, configServer._publicKey, req, res);
-        }
-    });
+        });
 
-    app.post('/keys/id-key/verification', (req, res) => {
+    app.post('/keys/workspaces/:workspaceId/apps/:appId/id-keys',
+        orPermisionFilter(
+            adminTokenFilter,
+            workspaceIdTokenFilter((req) => req.params.workspaceId),
+            appIdSecretFilter((req) => req.params.appId, (req) => req.body.secret)
+        ), (req, res) => {
+            return keysController.generateAppIdKey(configServer._privateKey, configServer._publicKey, req, res);
+        });
+
+    app.post('/keys/id-keys/verification', (req, res) => {
         return keysController.verifyIdKey(configServer._publicKey, req, res);
     });
 
-    app.post('/keys/api-key', orPermisionFilter(
-        adminTokenFilter,
-        workspaceIdTokenFilter(async(req) => {
-            let app = await dataStoreHolder.getDataStore().getApp(req.params.appId);
-            if (app) {
-                return Promise.resolve(app.workspaceId);
-            } else {
-                return Promise.resolve(undefined);
-            }
-        }),
-        appIdTokenFilter(async(req) => Promise.resolve(req.params.appId))), (req, res) => {
-        return keysController.generateApiKey(configServer._privateKey, configServer._publicKey, req, res);
-    });
+    app.post('/keys/workspaces/:workspaceId/apps/:appId/api-keys',
+        orPermisionFilter(
+            adminTokenFilter,
+            workspaceIdTokenFilter((req) => req.params.workspaceId),
+            appIdTokenFilter((req) => req.params.appId)
+        ),
+        (req, res) => {
+            return keysController.generateApiKey(configServer._privateKey, configServer._publicKey, req, res);
+        });
 
-    app.post('/keys/api-key/verification', (req, res) => {
+    app.post('/keys/api-keys/verification', (req, res) => {
         return keysController.verifyApiKey(configServer._publicKey, req, res);
     });
 

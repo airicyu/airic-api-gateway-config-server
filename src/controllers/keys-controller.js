@@ -6,8 +6,20 @@ const dataStoreHolder = require('./../data-store/config-data-store').dataStoreHo
 const keyDataStoreHolder = require('./../data-store/keys-data-store').dataStoreHolder;
 
 const generateWorkspaceIdKey = async(privateKey, publicKey, req, res) => {
-    let workspaceId = req.body.workspaceId;
-    let workspaceSecret = req.body.secret;
+    let workspaceId = req.params.workspaceId;
+
+    let auth = false;
+    let reqAuth = req.user && req.user.auth || {};
+    if (reqAuth['admin']){
+        auth = true;
+    } else if (reqAuth['workspace'] && reqAuth['workspace'][workspaceId]){
+        auth = true;
+    }
+    
+    if (!auth) {
+        return res.sendStatus(401);
+    }
+
     let state = req.body.state || null;
     if (state != null) {
         state = state.toString();
@@ -19,10 +31,7 @@ const generateWorkspaceIdKey = async(privateKey, publicKey, req, res) => {
     try {
         let workspace = await dataStoreHolder.getDataStore().getWorkspace(workspaceId);
         if (!workspace) {
-            return Promise.resolve(res.sendStatus(400));
-        }
-        if (workspace.secret !== workspaceSecret) {
-            return Promise.resolve(res.sendStatus(401));
+            return res.sendStatus(404);
         }
 
         let key = keyServiceHolder.getKeyService().generateWorkspaceKey(privateKey, publicKey, workspace, state, req);
@@ -32,18 +41,34 @@ const generateWorkspaceIdKey = async(privateKey, publicKey, req, res) => {
                 subjectType: 'workspace',
                 subject: workspaceId
             })) {
-            return Promise.resolve(res.send(key));
+            return res.send(key);
         }
     } catch (error) {
         console.error(error);
     }
 
-    return Promise.resolve(res.sendStatus(500));
+    return res.sendStatus(500);
 }
 
 const generateAppIdKey = async(privateKey, publicKey, req, res) => {
-    let appId = req.body.appId;
-    let appSecret = req.body.secret;
+    let workspaceId = req.params.workspaceId;
+    let appId = req.params.appId;
+
+    let auth = false;
+    let reqAuth = req.user && req.user.auth || {};
+    if (reqAuth['admin']){
+        auth = true;
+    } else if (reqAuth['workspace'] && reqAuth['workspace'][workspaceId]){
+        auth = true;
+    } else if (reqAuth['app'][appId]){
+        auth = true;
+    }
+
+    if (!auth) {
+        return res.sendStatus(401);
+    }
+
+    
     let state = req.body.state || null;
     if (state != null) {
         state = state.toString();
@@ -54,11 +79,8 @@ const generateAppIdKey = async(privateKey, publicKey, req, res) => {
 
     try {
         let app = await dataStoreHolder.getDataStore().getApp(appId);
-        if (!app) {
-            return Promise.resolve(res.sendStatus(400));
-        }
-        if (app.secret !== appSecret) {
-            return Promise.resolve(res.sendStatus(401));
+        if (!app || app.workspaceId !== req.params.workspaceId) {
+            return res.sendStatus(404);
         }
 
         let key = keyServiceHolder.getKeyService().generateAppKey(privateKey, publicKey, app, state, req);
@@ -68,23 +90,23 @@ const generateAppIdKey = async(privateKey, publicKey, req, res) => {
                 subjectType: 'app',
                 subject: appId
             })) {
-            return Promise.resolve(res.send(key));
+            return res.send(key);
         }
     } catch (error) {
         console.error(error);
     }
 
-    return Promise.resolve(res.sendStatus(500));
+    return res.sendStatus(500);
 }
 
 const verifyIdKey = async(publicKey, req, res) => {
     let idKey = req.body.key;
     if (!idKey) {
-        return Promise.resolve(res.send({
+        return res.send({
             result: false,
             code: 400,
             message: 'Invalid key'
-        }));
+        });
     }
 
     try {
@@ -98,26 +120,26 @@ const verifyIdKey = async(publicKey, req, res) => {
                 try {
                     header = JSON.parse(new Buffer(idKey.split('.')[0], 'base64').toString());
                 } catch (e) {}
-                return Promise.resolve(res.send({
+                return res.send({
                     result: true,
                     token: {
                         header: header,
                         payload: keyDecoded
                     }
-                }));
+                });
             } else {
-                return Promise.resolve(res.send({
+                return res.send({
                     result: false,
                     code: 400,
                     message: 'Invalid key'
-                }));
+                });
             }
         } else {
-            return Promise.resolve(res.send({
+            return res.send({
                 result: false,
                 code: 400,
                 message: 'Invalid key'
-            }));
+            });
         }
     } catch (error) {
         console.error(error);
@@ -127,8 +149,8 @@ const verifyIdKey = async(publicKey, req, res) => {
 }
 
 const generateApiKey = async(privateKey, publicKey, req, res) => {
-    let appId = req.body.appId;
-    let appSecret = req.body.secret;
+    let workspaceId = req.params.workspaceId;
+    let appId = req.params.appId;
     let clientId = req.body.clientId;
     let state = req.body.state || null;
     if (state != null) {
@@ -138,14 +160,30 @@ const generateApiKey = async(privateKey, publicKey, req, res) => {
         }
     }
 
+    let auth = false;
+    let reqAuth = req.user && req.user.auth || {};
+    if (reqAuth['admin']){
+        auth = true;
+    } else if (reqAuth['workspace'] && reqAuth['workspace'][workspaceId]){
+        auth = true;
+    } else if (reqAuth['app'][appId]){
+        auth = true;
+    }
+
+    if (!auth) {
+        return res.sendStatus(401);
+    }
+    
     try {
         let app = await dataStoreHolder.getDataStore().getApp(appId);
         let client = await dataStoreHolder.getDataStore().getClient(clientId);
-        if (!app || !client || app.workspaceId !== client.workspaceId) {
-            return Promise.resolve(res.sendStatus(400));
+
+        if (!app || app.workspaceId !== req.params.workspaceId) {
+            return res.sendStatus(404);
         }
-        if (app.secret !== appSecret) {
-            return Promise.resolve(res.sendStatus(401));
+
+        if (!app || app.workspaceId !== req.params.workspaceId || !client || client.workspaceId !== req.params.workspaceId) {
+            return res.sendStatus(400);
         }
 
         let key = keyServiceHolder.getKeyService().generateClientAppApiKey(privateKey, publicKey, client, app, state, req);
@@ -155,23 +193,23 @@ const generateApiKey = async(privateKey, publicKey, req, res) => {
                 appId: appId,
                 clientId: clientId
             })) {
-            return Promise.resolve(res.send(key));
+            return res.send(key);
         }
     } catch (error) {
         console.error(error);
     }
 
-    return Promise.resolve(res.sendStatus(500));
+    return res.sendStatus(500);
 }
 
 const verifyApiKey = async(publicKey, req, res) => {
     let apiKey = req.body.key;
     if (!apiKey) {
-        return Promise.resolve(res.send({
+        return res.send({
             result: false,
             code: 400,
             message: 'Invalid key'
-        }));
+        });
     }
 
     try {
@@ -185,32 +223,32 @@ const verifyApiKey = async(publicKey, req, res) => {
                 try {
                     header = JSON.parse(new Buffer(apiKey.split('.')[0], 'base64').toString());
                 } catch (e) {}
-                return Promise.resolve(res.send({
+                return res.send({
                     result: true,
                     token: {
                         header: header,
                         payload: keyDecoded
                     }
-                }));
+                });
             } else {
-                return Promise.resolve(res.send({
+                return res.send({
                     result: false,
                     code: 400,
                     message: 'Invalid key'
-                }));
+                });
             }
         } else {
-            return Promise.resolve(res.send({
+            return res.send({
                 result: false,
                 code: 400,
                 message: 'Invalid key'
-            }));
+            });
         }
     } catch (error) {
         console.error(error);
     }
 
-    return Promise.resolve(res.sendStatus(500));
+    return res.sendStatus(500);
 }
 
 module.exports = {
