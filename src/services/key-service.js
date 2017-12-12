@@ -4,6 +4,7 @@ const crypto = require('crypto');
 const jwt = require('jsonwebtoken');
 
 const pubre = /^(ssh-[dr]s[as]\s+)|(\s+.+)|\n/g;
+
 function fingerprint(pub, alg) {
     alg = alg || 'md5'; // OpenSSH Standard
 
@@ -30,11 +31,11 @@ const keyServiceHolder = {
     getKeyService: null,
 }
 
-keyServiceHolder.setKeyService = function(keyService){
+keyServiceHolder.setKeyService = function (keyService) {
     this._keyService = keyService;
 }.bind(keyServiceHolder);
 
-keyServiceHolder.getKeyService = function(){
+keyServiceHolder.getKeyService = function () {
     return this._keyService;
 }.bind(keyServiceHolder);
 
@@ -94,14 +95,22 @@ const defaultKeyServiceImpl = {
         });
     },
     verifyIdKey: function (idKey, publicKey, req) {
-        return jwt.verify(idKey, publicKey, {
-            algorithm: 'RS256'
-        });
+        try {
+            return jwt.verify(idKey, publicKey, {
+                algorithm: 'RS256'
+            });
+        } catch (e) {
+            return false;
+        }
     },
     verifyApiKey: function (apiKey, publicKey, req) {
-        return jwt.verify(apiKey, publicKey, {
-            algorithm: 'RS256'
-        });
+        try {
+            return jwt.verify(apiKey, publicKey, {
+                algorithm: 'RS256'
+            });
+        } catch (e) {
+            return false;
+        }
     },
 }
 
